@@ -239,4 +239,25 @@ Contributions are much welcomed!
 [MIT License](LICENSE)
 
 [mcp]: https://modelcontextprotocol.io/
-# StoryTelling-powerbi
+
+## Storytelling UI (Ollama + Vercel AI SDK)
+
+A streaming storytelling UI is available under `web/`.
+
+Quick start:
+
+```bash
+# terminal 1
+./scripts/run_flask_dashboard.sh
+
+# terminal 2
+cd web
+cp .env.example .env.local
+# set FLASK_URL to the printed Flask port
+npm install
+npm run dev
+```
+
+Open `http://127.0.0.1:3000`.
+
+Full instructions: `web/README.md`.
