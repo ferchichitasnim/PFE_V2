@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 import os
+import tempfile
+import urllib.request
 from typing import Any
 
 from flask import Flask, jsonify, redirect, render_template, request
@@ -65,6 +67,23 @@ def summarize(stats_rows: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def extract_pbix_payload(resolved: str) -> dict[str, Any]:
+    model = PBIXRay(resolved)
+    tables = normalize_tables(model.tables)
+    stats_rows = normalize_statistics(model.statistics)
+    summary = summarize(stats_rows)
+    story_context = build_story_context(resolved, model.tables, model.statistics)
+    return {
+        "ok": True,
+        "pbix_path": resolved,
+        "file_name": os.path.basename(resolved),
+        "tables": tables,
+        "summary": summary,
+        "stats_preview": stats_rows[:100],
+        "context": story_context,
+    }
+
+
 @app.get("/")
 def index():
     default_path = os.path.abspath("Employee Hiring and History.pbix")
@@ -92,24 +111,47 @@ def api_pbix_context():
         return jsonify({"ok": False, "error": f"PBIX file not found: {resolved}"}), 404
 
     try:
-        model = PBIXRay(resolved)
-        tables = normalize_tables(model.tables)
-        stats_rows = normalize_statistics(model.statistics)
-        summary = summarize(stats_rows)
-        story_context = build_story_context(resolved, model.tables, model.statistics)
-        return jsonify(
-            {
-                "ok": True,
-                "pbix_path": resolved,
-                "file_name": os.path.basename(resolved),
-                "tables": tables,
-                "summary": summary,
-                "stats_preview": stats_rows[:100],
-                "context": story_context,
-            }
-        )
+        return jsonify(extract_pbix_payload(resolved))
     except Exception as exc:
         return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+@app.post("/api/pbix/upload")
+def api_pbix_upload():
+    upload = request.files.get("file")
+    if upload is None:
+        return jsonify({"ok": False, "error": "Missing file field."}), 400
+
+    filename = upload.filename or ""
+    if not filename.lower().endswith(".pbix"):
+        return jsonify({"ok": False, "error": "Only .pbix files are accepted."}), 400
+
+    fd, tmp_path = tempfile.mkstemp(prefix="pbix_story_", suffix=".pbix")
+    os.close(fd)
+    try:
+        upload.save(tmp_path)
+        payload = extract_pbix_payload(tmp_path)
+        payload["uploaded_name"] = filename
+        return jsonify(payload)
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+    finally:
+        try:
+            os.remove(tmp_path)
+        except OSError:
+            pass
+
+
+@app.get("/api/ollama/models")
+def api_ollama_models():
+    base = os.environ.get("OLLAMA_BASE_URL", "http://127.0.0.1:11434").rstrip("/")
+    url = f"{base}/api/tags"
+    try:
+        with urllib.request.urlopen(url, timeout=20) as response:
+            body = response.read().decode("utf-8")
+        return app.response_class(body, status=200, mimetype="application/json")
+    except Exception as exc:
+        return jsonify({"ok": False, "error": f"Failed to fetch Ollama models: {exc}"}), 500
 
 
 @app.post("/analyze")

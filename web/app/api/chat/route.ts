@@ -17,7 +17,10 @@ Output format rules:
 export async function POST(req: Request) {
   let body: {
     messages?: { role: string; content: string }[];
+    /** useCompletion / useChat sends this instead of messages */
+    prompt?: string;
     pbixPath?: string;
+    context?: Record<string, unknown>;
     model?: string;
   };
   try {
@@ -31,31 +34,34 @@ export async function POST(req: Request) {
 
   const pbixPath = (body.pbixPath || "").trim();
   const model = (body.model || process.env.OLLAMA_MODEL || "llama3.2:3b").trim();
-  const messages = (body.messages || []) as CoreMessage[];
-
-  if (!pbixPath) {
-    return new Response(JSON.stringify({ error: "pbixPath is required" }), {
-      status: 400,
-      headers: { "Content-Type": "application/json" },
-    });
+  let messages = (body.messages || []) as CoreMessage[];
+  const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
+  if (messages.length === 0 && prompt) {
+    messages = [{ role: "user", content: prompt }];
   }
+  let context = body.context;
 
-  const flaskUrl = (process.env.FLASK_URL || "http://127.0.0.1:5052").replace(/\/$/, "");
-  const ctxRes = await fetch(
-    `${flaskUrl}/api/pbix/context?pbix_path=${encodeURIComponent(pbixPath)}`
-  );
-  const data = (await ctxRes.json()) as {
-    ok?: boolean;
-    error?: string;
-    context?: Record<string, unknown>;
-    file_name?: string;
-  };
-
-  if (!data.ok || !data.context) {
-    return new Response(JSON.stringify({ error: data.error || "Failed to load PBIX context" }), {
-      status: ctxRes.ok ? 400 : ctxRes.status,
-      headers: { "Content-Type": "application/json" },
-    });
+  if (!context) {
+    if (!pbixPath) {
+      return new Response(JSON.stringify({ error: "pbixPath is required" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    const flaskUrl = (process.env.FLASK_URL || "http://127.0.0.1:5052").replace(/\/$/, "");
+    const ctxRes = await fetch(`${flaskUrl}/api/pbix/context?pbix_path=${encodeURIComponent(pbixPath)}`);
+    const data = (await ctxRes.json()) as {
+      ok?: boolean;
+      error?: string;
+      context?: Record<string, unknown>;
+    };
+    if (!data.ok || !data.context) {
+      return new Response(JSON.stringify({ error: data.error || "Failed to load PBIX context" }), {
+        status: ctxRes.ok ? 400 : ctxRes.status,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    context = data.context;
   }
 
   const ollamaBase = (process.env.OLLAMA_BASE_URL || "http://127.0.0.1:11434").replace(/\/$/, "");
@@ -64,7 +70,16 @@ export async function POST(req: Request) {
     apiKey: "ollama",
   });
 
-  const system = `${STORY_RULES}\n\nFile: ${data.file_name || ""}\n\nContext JSON:\n${JSON.stringify(data.context)}`;
+  if (messages.length === 0) {
+    return new Response(
+      JSON.stringify({
+        error: "Missing prompt or messages. useCompletion sends `prompt`; useChat sends `messages`.",
+      }),
+      { status: 400, headers: { "Content-Type": "application/json" } }
+    );
+  }
+
+  const system = `${STORY_RULES}\n\nContext JSON:\n${JSON.stringify(context)}`;
 
   const result = await streamText({
     model: ollama(model),
