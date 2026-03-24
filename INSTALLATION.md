@@ -160,7 +160,9 @@ export OLLAMA_MODEL="llama3.2:3b"
 
 ### Streaming Story UI (Vercel AI SDK)
 
-Narrative is streamed in the browser (no HTML download). Flask only exposes PBIX context at `GET /api/pbix/context`.
+Narrative is streamed in the browser (no HTML download). Flask exposes PBIX context at `GET /api/pbix/context`. The DAX Generator calls `POST /api/dax/generate` (SSE stream from Ollama).
+
+**DAX slow / stuck:** After `ollama POST …` you see **`blocking on urllib.urlopen()`** — Ollama often returns HTTP only **after** the first token is ready, so **huge prompts** (many KB of `pbix_context` + textarea) can **block for minutes** on CPU. Defaults: **`DAX_MAX_PBIX_CONTEXT_CHARS=8000`**, **`DAX_MAX_USER_CONTEXT_CHARS=4000`** (set to **`0`** to disable truncation for that field). Optional: **`DAX_OLLAMA_NUM_CTX=8192`** to cap context window. Heartbeat: `DAX_URLOPEN_HEARTBEAT_SEC`. Socket timeout for the Ollama HTTP call: **`DAX_OLLAMA_READ_TIMEOUT_SEC`** (default **600**; alias **`DAX_OLLAMA_TIMEOUT_SEC`**). Python’s `urllib` here needs a **single** float (tuple connect/read breaks on 3.12). Warm model: `ollama run <model>`. Browser: `[dax:client]`; verbose: `NEXT_PUBLIC_DAX_DEBUG=1`, `DAX_LOG_LEVEL=DEBUG`.
 
 Terminal 1:
 

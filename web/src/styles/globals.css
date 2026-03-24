@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap");
+
 :root {
   --pbi-yellow: #f2c811;
   --pbi-black: #000000;
@@ -8,6 +10,7 @@
   --pbi-muted: #8892a4;
   --pbi-success: #00b294;
   --pbi-purple: #8764b8;
+  --pbi-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
 }
 
 * {
@@ -78,5 +81,54 @@ body {
 @media (max-width: 1024px) {
   .section-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+.dax-page-grid {
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 1024px) {
+  .dax-page-grid {
+    grid-template-columns: minmax(0, 0.45fr) minmax(0, 0.55fr);
+  }
+}
+
+.dax-textarea:focus {
+  outline: 2px solid rgba(242, 200, 17, 0.35);
+  border-color: var(--pbi-yellow) !important;
+}
+
+.dax-pill:hover {
+  background: var(--pbi-yellow) !important;
+  color: var(--pbi-black) !important;
+}
+
+@keyframes dax-shimmer {
+  0% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0.45;
+  }
+}
+
+.dax-skeleton-line {
+  height: 10px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #101a33, #1a2744, #101a33);
+  animation: dax-shimmer 1.2s ease-in-out infinite;
+}
+
+.dax-spin {
+  animation: dax-spin 0.85s linear infinite;
+}
+
+@keyframes dax-spin {
+  to {
+    transform: rotate(360deg);
   }
 }
