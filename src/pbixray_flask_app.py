@@ -396,7 +396,12 @@ def iter_ollama_chat_stream(
         stop_hb.set()
     connect_ms = (time.perf_counter() - t_connect_start) * 1000
     status = getattr(resp, "status", None)
-    logger.info("[dax]%s ollama tcp/http ready status=%s connect_ms=%.1f (if high: Ollama slow to accept or model load)", rid, status, connect_ms)
+    logger.info(
+        "[dax]%s ollama tcp/http ready status=%s connect_ms=%.1f (if high: Ollama slow to accept or model load)",
+        rid,
+        status,
+        connect_ms,
+    )
 
     line_num = 0
     json_ok = 0
@@ -431,7 +436,9 @@ def iter_ollama_chat_stream(
                 )
 
             if not raw:
-                logger.info("[dax]%s readline eof after %d lines yields=%d chars=%d", rid, line_num, content_yields, total_chars)
+                logger.info(
+                    "[dax]%s readline eof after %d lines yields=%d chars=%d", rid, line_num, content_yields, total_chars
+                )
                 break
 
             line = raw.decode("utf-8", errors="replace").strip()
@@ -572,7 +579,12 @@ Reference real relationships when using RELATED or USERELATIONSHIP.
             ):
                 sse_chunks += 1
                 yield f"data: {json.dumps({'type': 'chunk', 'text': piece})}\n\n"
-            logger.info("[dax] req_id=%s ollama iterator done sse_chunks=%d elapsed_ms=%.1f", req_id, sse_chunks, (time.perf_counter() - t0) * 1000)
+            logger.info(
+                "[dax] req_id=%s ollama iterator done sse_chunks=%d elapsed_ms=%.1f",
+                req_id,
+                sse_chunks,
+                (time.perf_counter() - t0) * 1000,
+            )
         except Exception as exc:
             logger.error("[dax] req_id=%s stream error: %s\n%s", req_id, exc, traceback.format_exc())
             yield f"data: {json.dumps({'type': 'error', 'message': str(exc), 'req_id': req_id})}\n\n"
