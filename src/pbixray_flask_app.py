@@ -60,18 +60,12 @@ def _friendly_ollama_error(exc: Exception, base_url: str, model: str | None = No
     if isinstance(exc, urllib.error.URLError):
         reason = exc.reason
         if isinstance(reason, ConnectionRefusedError):
-            return (
-                f"Cannot reach Ollama at {base_url}. Start Ollama with `ollama serve`"
-                f"{model_hint}, then retry."
-            )
+            return f"Cannot reach Ollama at {base_url}. Start Ollama with `ollama serve`" f"{model_hint}, then retry."
         if isinstance(reason, socket.timeout):
             return f"Ollama request timed out at {base_url}. Try again or use a smaller model."
 
     if "connection refused" in lowered or "winerror 10061" in lowered:
-        return (
-            f"Cannot reach Ollama at {base_url}. Start Ollama with `ollama serve`"
-            f"{model_hint}, then retry."
-        )
+        return f"Cannot reach Ollama at {base_url}. Start Ollama with `ollama serve`" f"{model_hint}, then retry."
     if "timed out" in lowered:
         return f"Ollama request timed out at {base_url}. Try again or use a smaller model."
 
@@ -208,7 +202,7 @@ def _table_roles(
         else:
             # 2. Relationship-based heuristic
             is_from = table in from_tables  # appears as the "many" / FK side
-            is_to = table in to_tables      # appears as the "one" / lookup side
+            is_to = table in to_tables  # appears as the "one" / lookup side
 
             if is_to and not is_from:
                 # Only on the lookup side → dimension (e.g. Gender, AgeGroup, Ethnicity)
@@ -236,12 +230,7 @@ def _key_columns(schema_rows: list[dict[str, Any]]) -> list[dict[str, str]]:
         lower = column.lower()
         if not (table and column):
             continue
-        if (
-            lower.endswith("id")
-            or "key" in lower
-            or "date" in lower
-            or lower in {"id", "pk", "fk"}
-        ):
+        if lower.endswith("id") or "key" in lower or "date" in lower or lower in {"id", "pk", "fk"}:
             key_like.append({"table": table, "column": column, "data_type": dtype})
     return key_like
 
@@ -535,8 +524,7 @@ def _relationship_details_from_rows(relationships_rows: Any) -> list[dict[str, A
 
         if from_card is not None or to_card is not None:
             cardinality = (
-                f"{_readable_enum(from_card, CARDINALITY_MAP, '?')}"
-                f":{_readable_enum(to_card, CARDINALITY_MAP, '?')}"
+                f"{_readable_enum(from_card, CARDINALITY_MAP, '?')}" f":{_readable_enum(to_card, CARDINALITY_MAP, '?')}"
             )
         elif legacy_card is not None:
             cardinality = _readable_enum(legacy_card, CARDINALITY_MAP)
@@ -927,11 +915,17 @@ def iter_ollama_chat_stream(
     )
     _log_flush(
         "[dax]%s ollama POST %s model=%s payload_bytes=%d system_chars=%d user_chars=%d",
-        rid, url, model, len(data), len(system), len(user),
+        rid,
+        url,
+        model,
+        len(data),
+        len(system),
+        len(user),
     )
     _log_flush(
         "[dax]%s blocking on urllib.urlopen() — try: `ollama ps`, `ollama run %s` to warm.",
-        rid, model,
+        rid,
+        model,
     )
     t_connect_start = time.perf_counter()
     hb_sec = float(os.environ.get("DAX_URLOPEN_HEARTBEAT_SEC", "3"))
@@ -943,7 +937,8 @@ def iter_ollama_chat_stream(
             elapsed = time.perf_counter() - t_connect_start
             _log_flush(
                 "[dax]%s still inside urlopen after %.1fs — check `ollama ps` / GPU.",
-                rid, elapsed,
+                rid,
+                elapsed,
             )
 
     try:
@@ -983,7 +978,9 @@ def iter_ollama_chat_stream(
                     logger.warning("[dax]%s slow readline line=%d blocked_ms=%.1f", rid, line_num, block_ms)
 
                 if not raw:
-                    logger.info("[dax]%s readline eof after %d lines yields=%d chars=%d", rid, line_num, content_yields, total_chars)
+                    logger.info(
+                        "[dax]%s readline eof after %d lines yields=%d chars=%d", rid, line_num, content_yields, total_chars
+                    )
                     break
 
                 line = raw.decode("utf-8", errors="replace").strip()
@@ -1000,7 +997,9 @@ def iter_ollama_chat_stream(
                 json_ok += 1
 
                 if obj.get("done"):
-                    logger.info("[dax]%s ollama done=true lines=%d yields=%d chars=%d", rid, line_num, content_yields, total_chars)
+                    logger.info(
+                        "[dax]%s ollama done=true lines=%d yields=%d chars=%d", rid, line_num, content_yields, total_chars
+                    )
                     break
 
                 msg = obj.get("message") or {}
@@ -1037,7 +1036,14 @@ def api_dax_generate():
     context = (body.get("context") or "").strip()
     pbix_context = (body.get("pbix_context") or "").strip()
     model = (body.get("model") or os.environ.get("OLLAMA_MODEL", "llama3.2:3b")).strip()
-    logger.info("[dax] req_id=%s begin query_len=%d context_len=%d pbix_context_len=%d model=%s", req_id, len(query), len(context), len(pbix_context), model)
+    logger.info(
+        "[dax] req_id=%s begin query_len=%d context_len=%d pbix_context_len=%d model=%s",
+        req_id,
+        len(query),
+        len(context),
+        len(pbix_context),
+        model,
+    )
     if not query:
         return jsonify({"ok": False, "error": "query is required"}), 400
 

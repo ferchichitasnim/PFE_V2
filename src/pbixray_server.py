@@ -63,9 +63,11 @@ def secure_tool(*args, **kwargs):
         tool_name = func.__name__
 
         if tool_name in disallowed_tools:
+
             @functools.wraps(func)
             def disabled_tool(*f_args, **f_kwargs):
                 return f"Error: The tool '{tool_name}' has been disabled by the server administrator."
+
             return original_decorator(disabled_tool)
         else:
             return original_decorator(func)
@@ -81,11 +83,13 @@ current_model_path: Optional[str] = None
 
 async def run_model_operation(ctx: Context, operation_name: str, operation_fn, *args, **kwargs):
     import time
+
     start_time = time.time()
     await ctx.info(f"Starting {operation_name}...")
     await ctx.report_progress(0, 100)
 
     try:
+
         def run_operation():
             return operation_fn(*args, **kwargs)
 
@@ -292,31 +296,37 @@ def get_rls_roles(ctx: Context) -> str:
                     rows = value.to_dict(orient="records")
                     if rows:
                         has_rls = True
-                        details.append({
-                            "source": attr,
-                            "count": len(rows),
-                            "entries": rows[:20],
-                        })
+                        details.append(
+                            {
+                                "source": attr,
+                                "count": len(rows),
+                                "entries": rows[:20],
+                            }
+                        )
                     continue
 
                 if isinstance(value, (list, tuple)):
                     if len(value) > 0:
                         has_rls = True
-                        details.append({
-                            "source": attr,
-                            "count": len(value),
-                            "entries": list(value)[:20],
-                        })
+                        details.append(
+                            {
+                                "source": attr,
+                                "count": len(value),
+                                "entries": list(value)[:20],
+                            }
+                        )
                     continue
 
                 if isinstance(value, dict):
                     if len(value) > 0:
                         has_rls = True
-                        details.append({
-                            "source": attr,
-                            "count": len(value),
-                            "entries": value,
-                        })
+                        details.append(
+                            {
+                                "source": attr,
+                                "count": len(value),
+                                "entries": value,
+                            }
+                        )
                     continue
             except Exception:
                 continue
@@ -492,6 +502,7 @@ async def get_relationships(ctx: Context, from_table: str = None, to_table: str 
         return "Error: No Power BI file loaded. Please use load_pbix_file first."
 
     try:
+
         def get_filtered_relationships():
             model = current_model
             relationships = model.relationships
@@ -547,6 +558,7 @@ async def get_table_contents(ctx: Context, table_name: str, filters: str = None,
 
     try:
         import time
+
         start_time = time.time()
 
         if page_size is None:
@@ -655,7 +667,9 @@ async def get_table_contents(ctx: Context, table_name: str, filters: str = None,
         elapsed_time = time.time() - start_time
         if elapsed_time > 1.0:
             if filters:
-                await ctx.info(f"Retrieved filtered data from '{table_name}' ({total_rows} rows after filtering) in {elapsed_time:.2f} seconds")
+                await ctx.info(
+                    f"Retrieved filtered data from '{table_name}' ({total_rows} rows after filtering) in {elapsed_time:.2f} seconds"
+                )
             else:
                 await ctx.info(f"Retrieved data from '{table_name}' ({total_rows} rows) in {elapsed_time:.2f} seconds")
 
