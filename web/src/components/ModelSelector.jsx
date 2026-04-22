@@ -42,6 +42,12 @@ export default function ModelSelector({ models, selected, onSelect }) {
                 padding: 10,
                 cursor: "pointer",
               }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "var(--pbi-surface-alt)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "transparent";
+              }}
             >
               <div style={{ fontWeight: 700 }}>{m.name}</div>
               <div className="muted" style={{ fontSize: 12 }}>

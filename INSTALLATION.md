@@ -133,7 +133,7 @@ chmod +x ./scripts/run_flask_dashboard.sh
 Then open:
 
 ```text
-http://127.0.0.1:5050 (or printed port if 5050 is already in use)
+http://127.0.0.1:5052 (or printed port if 5052 is already in use)
 ```
 
 ## Storytelling With Ollama

@@ -21,9 +21,9 @@ pick_port() {
   return 1
 }
 
-PORT="${PBIX_DASHBOARD_PORT:-$(pick_port 5050)}"
+PORT="${PBIX_DASHBOARD_PORT:-$(pick_port 5052)}"
 if [[ -z "${PORT}" ]]; then
-  echo "No free port found in range 5050-5099"
+  echo "No free port found in range 5052-5099"
   exit 1
 fi
 

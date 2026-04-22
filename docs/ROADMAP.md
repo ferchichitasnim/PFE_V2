@@ -1,138 +1,71 @@
-# PBIXRay MCP Server Roadmap
+# PBIXRay MCP Server Roadmap (Current)
 
-This document outlines the planned improvements for the PBIXRay MCP server to make it more client-agnostic, better organized, and more maintainable.
+This roadmap reflects the current state after integrating MCP as the semantic data gateway for runtime context extraction.
 
-## 1. Make Implementation Client-Agnostic
+---
 
-Currently, the codebase contains references to specific LLM clients (notably Claude). To make the server more neutral and usable with any MCP-compatible client:
+## 1) Completed Milestones
 
-### Action Items
-- [ ] Review and update all code to remove specific client references
-  - [ ] Update `pbixray_server.py` to remove any client-specific assumptions
-  - [ ] Rename variables, comments, and documentation to use generic "MCP client" terminology
-  - [ ] Update error messages to be client-neutral
-- [ ] Make the demo script work with any MCP client, not just Claude Desktop
-- [ ] Reframe the server as a general-purpose "PBIXRay MCP Server" rather than a Claude extension
+- [x] MCP server (`src/pbixray_server.py`) exposes core semantic tools.
+- [x] Flask + Next.js local copilot stack is operational.
+- [x] Storytelling and DAX generation flows run against local Ollama.
+- [x] Project structure reorganization completed (`src/`, `tests/`, `examples/`, `docs/`).
+- [x] Baseline docs/install/contribution files exist.
+- [x] Runtime context extraction in Flask is MCP-driven (`contextSource: "mcp"`).
 
-### Files to Modify
-- `pbixray_server.py`
-- `demo.py`
-- `test_*.py` files
-- `README.md`
+---
 
-## 2. Configuration Management Updates
+## 2) In Progress / Hardening
 
-Instead of providing an install script that directly modifies Claude Desktop configurations, provide clear instructions for manually configuring any MCP client.
+- [ ] Stabilize MCP output normalization layer (all tool output formats).
+- [ ] Improve timeout/retry behavior for MCP session startup and tool calls.
+- [ ] Reduce repeated process startup overhead (consider persistent MCP session/pool).
+- [ ] Expand/validate documentation payload fidelity for all PBIX variants.
+- [ ] Add explicit user-visible diagnostics for `contextSource` and MCP errors.
 
-### Action Items
-- [ ] Remove `install_claude_desktop.py` script
-- [ ] Create generic configuration examples for common MCP clients
-- [ ] Update the README with client-agnostic configuration instructions
-- [ ] Add a dedicated `INSTALLATION.md` file with detailed setup instructions for various clients
-- [ ] Remove `claude_desktop_config.json` from the repository
+---
 
-### Files to Modify/Remove
-- Remove: `install_claude_desktop.py`
-- Remove: `claude_desktop_config.json`
-- Create: `examples/config/` directory with example configs
-- Update: `README.md`
-- Create: `INSTALLATION.md`
+## 3) Next Priority Work
 
-## 3. Demo Directory Cleanup
+## 3.1 Quality and correctness
 
-Clean up the demo directory to only include relevant PBIX sample files.
+- [ ] Add semantic payload validation tests (tables/schema/relationships/measures consistency).
+- [ ] Add regression tests for Story, DAX, and Documentation payload shape.
+- [ ] Add golden-test fixtures for predictable documentation output.
 
-### Action Items
-- [ ] Remove non-PBIX files from the demo directory
-  - [ ] Remove Excel files
-  - [ ] Remove log files
-- [ ] Add a README in the demo directory explaining the sample files
-- [ ] Consider including a small, purpose-built PBIX file for testing
+## 3.2 DAX and documentation improvements
 
-### Files to Modify/Remove
-- Remove: `demo/Financial Sample.xlsx`
-- Remove: `demo/wget-log*` files
-- Create: `demo/README.md`
+- [ ] Improve DAX prompt grounding from schema + relationship metadata.
+- [ ] Add clearer business-friendly documentation sections.
+- [ ] Add optional lineage and dependency visual summaries.
 
-## 4. Project Structure Reorganization
+## 3.3 Operability
 
-Reorganize the project files into a cleaner, more maintainable structure.
+- [ ] Add structured logs with request IDs across UI/Flask/MCP.
+- [ ] Add health endpoints and startup diagnostics.
+- [ ] Document troubleshooting playbook for common local failures.
 
-### Action Items
-- [ ] Create a `src/` directory for source code
-  - [ ] Move `pbixray_server.py` to `src/`
-- [ ] Create a `tests/` directory for test scripts
-  - [ ] Move all test scripts to `tests/`
-- [ ] Create an `examples/` directory
-  - [ ] Move `demo.py` to `examples/`
-  - [ ] Create example configuration snippets in `examples/config/`
-- [ ] Create a `docs/` directory for documentation
-  - [ ] Move this roadmap to `docs/`
-  - [ ] Add additional documentation as needed
-- [ ] Update imports and file references to reflect the new structure
-- [ ] Add proper `__init__.py` files to make the package importable
+---
 
-### New Directory Structure
-```
-pbixray-mcp-server/
-├── README.md
-├── INSTALLATION.md
-├── src/
-│   ├── __init__.py
-│   └── pbixray_server.py
-├── tests/
-│   ├── __init__.py
-│   ├── test_server.py
-│   └── test_with_sample.py
-├── examples/
-│   ├── demo.py
-│   └── config/
-│       ├── claude_desktop.json
-│       └── other_clients.json
-├── demo/
-│   ├── README.md
-│   └── AdventureWorks Sales.pbix
-└── docs/
-    ├── ROADMAP.md
-    └── USAGE.md
-```
+## 4) Medium-Term Goals
 
-## 5. Additional Improvements
+- [ ] Make MCP usage first-class for all semantic retrieval paths (including any remaining legacy flows).
+- [ ] Add integration tests for multiple MCP clients.
+- [ ] Add CI pipeline for lint/test/docs checks.
+- [ ] Package and version server releases more formally.
 
-### Action Items
-- [ ] Add proper docstrings to all functions
-- [ ] Implement proper logging instead of print statements
-- [ ] Create a setup.py to make the package installable via pip
-- [ ] Add a LICENSE file
-- [ ] Add contribution guidelines in CONTRIBUTING.md
-- [ ] Add version information to the server
+---
 
-## Timeline
+## 5) Backlog / Future Considerations
 
-1. **Phase 1: Client-Agnostic Implementation** (1-2 days)
-   - Update all code to remove client-specific references
-   - Update documentation to be client-neutral
+- [ ] Support additional PBIX analysis capabilities as PBIXRay evolves.
+- [ ] Add richer governance/security metadata support where available.
+- [ ] Evaluate performance optimization for large PBIX models.
+- [ ] Provide optional enterprise deployment profile (non-dev runtime setup).
 
-2. **Phase 2: Project Reorganization** (1-2 days)
-   - Create the new directory structure
-   - Move files to their appropriate locations
-   - Update imports and references
+---
 
-3. **Phase 3: Configuration and Demo Cleanup** (1 day)
-   - Remove unnecessary files
-   - Create example configurations
-   - Update README and installation instructions
+## 6) Notes
 
-4. **Phase 4: Additional Improvements** (2-3 days)
-   - Add proper documentation
-   - Implement logging
-   - Create setup.py
-   - Add LICENSE and contribution guidelines
-
-## Future Considerations
-
-- Package the server for distribution via PyPI
-- Add support for additional PBIX analysis features as they become available in PBIXRay
-- Create a simple web UI for visualizing PBIX file content
-- Add integration tests with multiple MCP clients
-- Add CI/CD pipeline for automated testing and deployment
+- This roadmap is execution-focused and should be updated as checkboxes move.
+- Use `docs/PROJECT_DOCUMENTATION.md` as architecture truth source and keep this file action-oriented.

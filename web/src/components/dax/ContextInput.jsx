@@ -36,7 +36,7 @@ export default function ContextInput({ value, onChange }) {
             placeholder="Table: Sales, Columns: Date, ProductID, Amount, IsReturn"
             rows={4}
             className="input"
-            style={{ minHeight: 96, resize: "vertical", background: "#101a33" }}
+            style={{ minHeight: 96, resize: "vertical", background: "var(--pbi-surface-alt)" }}
           />
           <div className="muted" style={{ fontSize: 12 }}>
             Paste relevant table and column names to improve accuracy

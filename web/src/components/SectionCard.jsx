@@ -4,7 +4,7 @@ export default function SectionCard({ title, icon, color, children }) {
   return (
     <motion.div
       className="card"
-      style={{ borderLeft: `4px solid ${color}`, padding: 14 }}
+      style={{ borderLeft: `4px solid ${color}`, padding: 16, background: "var(--pbi-surface-alt)" }}
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
     >

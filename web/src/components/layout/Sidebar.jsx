@@ -1,11 +1,12 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { BarChart3, BookOpen, ChevronLeft, ChevronRight, Zap } from "lucide-react";
+import { BarChart3, BookOpen, ChevronLeft, ChevronRight, FileText, Zap } from "lucide-react";
 
 export const NAV_ITEMS = [
   { id: "storytelling", label: "Storytelling", icon: BookOpen },
   { id: "dax", label: "DAX Generator", icon: Zap },
+  { id: "documentation", label: "Documentation", icon: FileText },
 ];
 
 export function MobileBottomNav({ activeTab, onTabChange }) {
@@ -90,9 +91,9 @@ export default function Sidebar({ activeTab, onTabChange, collapsed, onToggleCol
         <BarChart3 size={22} color="var(--pbi-yellow)" />
         {!collapsed && (
           <div>
-            <div style={{ fontWeight: 800, fontSize: 15 }}>PBIX Tools</div>
+            <div style={{ fontWeight: 800, fontSize: 15 }}>Power BI Assistant</div>
             <div className="muted" style={{ fontSize: 11 }}>
-              Story & DAX
+              Storytelling and DAX
             </div>
           </div>
         )}

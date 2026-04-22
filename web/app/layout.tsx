@@ -2,8 +2,8 @@ import type { ReactNode } from "react";
 import "../src/styles/globals.css";
 
 export const metadata = {
-  title: "PBIX Storyteller",
-  description: "AI-Powered Data Narratives",
+  title: "Power BI Assistant",
+  description: "Storytelling and DAX assistant for Power BI models",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

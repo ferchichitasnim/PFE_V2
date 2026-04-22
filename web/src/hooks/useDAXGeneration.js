@@ -2,8 +2,6 @@
 
 import { useCallback, useRef, useState } from "react";
 
-const LS_KEY = "pbix-dax-history-v1";
-
 const DAX_DEBUG = process.env.NEXT_PUBLIC_DAX_DEBUG === "1";
 
 function daxClientLog(phase, data) {
@@ -15,9 +13,21 @@ function daxClientLog(phase, data) {
 
 export function parseDaxSections(full) {
   const text = full || "";
-  const daxMatch = text.match(/##\s*DAX Measure\s*([\s\S]*?)(?=##\s*Logic Explanation\b|$)/i);
-  const logicMatch = text.match(/##\s*Logic Explanation\s*([\s\S]*?)(?=##\s*Suggested Improvements\b|$)/i);
-  const sugMatch = text.match(/##\s*Suggested Improvements\s*([\s\S]*)$/i);
+
+  // Match DAX code block — supports both heading styles
+  const daxMatch = text.match(
+    /##\s*DAX Measure\s*([\s\S]*?)(?=##\s*(?:Logic Explanation|How it works)\b|$)/i
+  );
+
+  // Match explanation — supports both "Logic Explanation" and "How it works"
+  const logicMatch = text.match(
+    /##\s*(?:Logic Explanation|How it works)\s*([\s\S]*?)(?=##\s*(?:Suggested Improvements|Suggestions?\s*(?:&|and)\s*Variants?)\b|$)/i
+  );
+
+  // Match suggestions — supports both "Suggested Improvements" and "Suggestions & Variants"
+  const sugMatch = text.match(
+    /##\s*(?:Suggested Improvements|Suggestions?\s*(?:&|and)\s*Variants?)\s*([\s\S]*?)(?=_Context source:|$)/i
+  );
 
   let daxCode = (daxMatch?.[1] || "").trim();
   daxCode = daxCode.replace(/^```[\w]*\s*/i, "").replace(/```\s*$/i, "").trim();
@@ -25,18 +35,20 @@ export function parseDaxSections(full) {
   const explanation = (logicMatch?.[1] || "").trim();
   const suggestions = (sugMatch?.[1] || "").trim();
 
+  // Fallback: model may not follow exact headings. Try to recover usable output.
+  if (!daxCode && !explanation && !suggestions && text.trim()) {
+    const codeFence = text.match(/```(?:dax|sql)?\s*([\s\S]*?)```/i);
+    if (codeFence?.[1]?.trim()) {
+      return { daxCode: codeFence[1].trim(), explanation: text.trim(), suggestions: "" };
+    }
+    return { daxCode: text.trim(), explanation: "", suggestions: "" };
+  }
+
   return { daxCode, explanation, suggestions };
 }
 
 function parseSSEDataLine(line) {
-  if (!line.startsWith("data:")) return null;
-  const raw = line.slice(5).trim();
-  if (!raw || raw === "[DONE]") return null;
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return null;
-  }
+  return line;
 }
 
 export default function useDAXGeneration() {
@@ -67,7 +79,7 @@ export default function useDAXGeneration() {
   }, []);
 
   const generate = useCallback(
-    async ({ query, context = "", model = "llama3.2:3b", pbixContext = "" }) => {
+    async ({ query, context = "", model = "llama3.2:3b", pbixContext = "", mcpContext = null }) => {
       const q = (query || "").trim();
       if (!q) {
         setError(new Error("Enter a description first."));
@@ -77,6 +89,8 @@ export default function useDAXGeneration() {
       abortRef.current?.abort();
       const ctrl = new AbortController();
       abortRef.current = ctrl;
+      const timeoutMs = Number.parseInt(process.env.NEXT_PUBLIC_DAX_CLIENT_TIMEOUT_MS || "90000", 10);
+      const timeoutId = setTimeout(() => ctrl.abort("client-timeout"), Number.isNaN(timeoutMs) ? 90000 : timeoutMs);
 
       setRawText("");
       setDaxCode("");
@@ -85,7 +99,6 @@ export default function useDAXGeneration() {
       setError(null);
       setIsLoading(true);
 
-      const flask = (process.env.NEXT_PUBLIC_FLASK_URL || "http://127.0.0.1:5052").replace(/\/$/, "");
       const t0 = typeof performance !== "undefined" ? performance.now() : 0;
       let lastMark = t0;
 
@@ -98,17 +111,20 @@ export default function useDAXGeneration() {
         daxClientLog(phase, { deltaMs, sinceStartMs, ...extra });
       };
 
-      mark("1_fetch_start", { url: `${flask}/api/dax/generate` });
+      mark("1_fetch_start", { url: "/api/chat (mode=dax)" });
 
+      let acc = "";
       try {
-        const res = await fetch(`${flask}/api/dax/generate`, {
+        const res = await fetch("/api/chat", {
           method: "POST",
-          headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            query: q,
-            context: context.trim(),
+            mode: "dax",
+            prompt: q,
+            daxContext: context.trim(),
             model,
-            pbix_context: typeof pbixContext === "string" ? pbixContext : "",
+            pbixContext: typeof pbixContext === "string" ? pbixContext : "",
+            mcpContext,
           }),
           signal: ctrl.signal,
         });
@@ -117,91 +133,90 @@ export default function useDAXGeneration() {
 
         if (!res.ok) {
           const errText = await res.text();
-          throw new Error(errText || `HTTP ${res.status}`);
+          let message = errText || `HTTP ${res.status}`;
+          try {
+            const parsed = JSON.parse(errText);
+            if (parsed?.error && typeof parsed.error === "string") {
+              message = parsed.error;
+            }
+          } catch {
+            // Keep raw text fallback.
+          }
+          throw new Error(message);
         }
 
         const reader = res.body?.getReader();
         if (!reader) throw new Error("No response body");
 
         const decoder = new TextDecoder();
-        let buffer = "";
-        let acc = "";
-        let sseEvents = 0;
         let chunkEvents = 0;
-        let reqId = null;
-
-        const handleLine = (trimmed) => {
-          if (!trimmed) return;
-          const evt = parseSSEDataLine(trimmed);
-          if (!evt) {
-            daxClientLog("sse_unparsed_line", { head: trimmed.slice(0, 80) });
-            return;
-          }
-          sseEvents += 1;
-          if (evt.req_id) reqId = evt.req_id;
-          daxClientLog("sse_event", { type: evt.type, req_id: evt.req_id, sseEvents });
-
-          if (evt.type === "error") throw new Error(evt.message || "Stream error");
-          if (evt.type === "start") {
-            mark("4_sse_start_event", { req_id: evt.req_id });
-          }
-          if (evt.type === "chunk" && evt.text) {
-            chunkEvents += 1;
-            if (chunkEvents === 1) {
-              mark("5_first_text_chunk", { req_id: reqId, textLen: evt.text.length });
-            }
-            acc += evt.text;
-            setRawText(acc);
-            applyParsed(acc);
-          }
-          if (evt.type === "done") {
-            mark("6_sse_done_event", { req_id: evt.req_id, chunks: chunkEvents });
-          }
-        };
 
         let firstReadBytes = true;
         while (true) {
           const { done, value } = await reader.read();
           if (done) {
-            mark("7_reader_done", { sseEvents, chunkEvents, accChars: acc.length });
+            mark("7_reader_done", { chunkEvents, accChars: acc.length });
             break;
           }
           if (firstReadBytes && value?.byteLength) {
             firstReadBytes = false;
-            mark("3_first_raw_bytes_from_flask", { bytes: value.byteLength });
+            mark("3_first_raw_bytes_from_api", { bytes: value.byteLength });
           }
           if (DAX_DEBUG && value?.byteLength) {
             daxClientLog("raw_chunk", { bytes: value.byteLength });
           }
-          buffer += decoder.decode(value, { stream: true });
-
-          let sep;
-          while ((sep = buffer.indexOf("\n\n")) >= 0) {
-            const block = buffer.slice(0, sep);
-            buffer = buffer.slice(sep + 2);
-            for (const line of block.split("\n")) {
-              handleLine(line.trim());
+          const textChunk = decoder.decode(value, { stream: true });
+          if (textChunk) {
+            chunkEvents += 1;
+            if (chunkEvents === 1) {
+              mark("5_first_text_chunk", { textLen: textChunk.length });
             }
+            acc += parseSSEDataLine(textChunk);
+            setRawText(acc);
+            applyParsed(acc);
           }
         }
 
-        for (const line of buffer.split("\n")) {
-          handleLine(line.trim());
+        if (!acc.trim()) {
+          throw new Error("No DAX output was returned. Try again or switch to a smaller Ollama model.");
         }
 
         applyParsed(acc);
         const parsed = parseDaxSections(acc);
-        mark("8_parse_complete", { totalChars: acc.length, sseEvents, chunkEvents });
+        mark("8_parse_complete", { totalChars: acc.length, chunkEvents });
         return { rawText: acc, ...parsed };
       } catch (e) {
-        if (e?.name === "AbortError") {
-          console.info("[dax:client]", "aborted");
+        const reason = String(ctrl.signal?.reason || "");
+        const errName = String(e?.name || "");
+        const errMessage = String(e?.message || e || "");
+        const isAbortLike =
+          errName === "AbortError" ||
+          errName === "TimeoutError" ||
+          reason.includes("client-timeout") ||
+          errMessage.includes("client-timeout") ||
+          errMessage.includes("The operation was aborted");
+
+        if (isAbortLike) {
+          const timedOut =
+            reason.includes("client-timeout") ||
+            errName === "TimeoutError" ||
+            errMessage.includes("client-timeout");
+
+          if (timedOut) {
+            // If we already rendered partial output, avoid masking it with a hard error.
+            if (!acc.trim()) {
+              setError(new Error("DAX generation timed out. Try a shorter prompt or a smaller Ollama model."));
+            }
+          } else {
+            console.info("[dax:client]", "aborted");
+          }
           return null;
         }
         console.info("[dax:client]", "error", { message: String(e) });
         setError(e instanceof Error ? e : new Error(String(e)));
         return null;
       } finally {
+        clearTimeout(timeoutId);
         setIsLoading(false);
         abortRef.current = null;
       }
@@ -211,14 +226,6 @@ export default function useDAXGeneration() {
 
   const stop = useCallback(() => {
     abortRef.current?.abort();
-  }, []);
-
-  const loadSnapshot = useCallback((snap) => {
-    setRawText(snap.rawText || "");
-    setDaxCode(snap.daxCode || "");
-    setExplanation(snap.explanation || "");
-    setSuggestions(snap.suggestions || "");
-    setError(null);
   }, []);
 
   return {
@@ -231,28 +238,5 @@ export default function useDAXGeneration() {
     generate,
     reset,
     stop,
-    loadSnapshot,
   };
-}
-
-export function loadDaxHistory() {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = localStorage.getItem(LS_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-export function saveDaxHistoryEntry(entry) {
-  const prev = loadDaxHistory();
-  const next = [entry, ...prev.filter((x) => x.id !== entry.id)].slice(0, 5);
-  localStorage.setItem(LS_KEY, JSON.stringify(next));
-}
-
-export function clearDaxHistory() {
-  localStorage.removeItem(LS_KEY);
 }

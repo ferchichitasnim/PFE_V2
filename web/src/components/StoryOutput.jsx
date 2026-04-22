@@ -5,19 +5,24 @@ import ReactMarkdown from "react-markdown";
 import toast from "react-hot-toast";
 import SectionCard from "./SectionCard";
 
-function extractSection(md, heading) {
-  const pattern = new RegExp(`##\\s*${heading}\\s*([\\s\\S]*?)(?=##\\s*|$)`, "i");
+function extractSection(md, headingPattern) {
+  const pattern = new RegExp(
+    `#{1,6}\\s*(?:${headingPattern})\\s*([\\s\\S]*?)(?=\\n\\s*#{1,6}\\s+|$)`,
+    "i"
+  );
   const match = md.match(pattern);
   return match ? match[1].trim() : "";
 }
 
 export default function StoryOutput({ content, loading }) {
-  const sections = {
-    overview: extractSection(content, "Overview"),
-    insights: extractSection(content, "Key Insights"),
-    risks: extractSection(content, "Risks or Data Quality Concerns"),
-    actions: extractSection(content, "Recommended Actions"),
+  const parsed = {
+    overview: extractSection(content, "Overview|Executive Summary"),
+    insights: extractSection(content, "Key Insights?|Insights?"),
+    risks: extractSection(content, "Risks?(?:\\s*(?:or|and)\\s*Data\\s*Quality\\s*Concerns?)?|Data\\s*Quality\\s*Concerns?"),
+    actions: extractSection(content, "Recommended Actions?|Actions?|Next Steps?"),
   };
+  const hasAnySection = Object.values(parsed).some(Boolean);
+  const sections = hasAnySection ? parsed : { ...parsed, overview: (content || "").trim() };
 
   const copyText = async () => {
     await navigator.clipboard.writeText(content || "");
@@ -38,22 +43,32 @@ export default function StoryOutput({ content, loading }) {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
         <h2 style={{ margin: 0 }}>Story Output</h2>
         <div style={{ display: "flex", gap: 8 }}>
-          <button className="button" onClick={copyText} disabled={!content}>
+          <button className="button" style={{ background: "var(--pbi-surface-alt)", color: "var(--pbi-text)" }} onClick={copyText} disabled={!content}>
             <Copy size={14} />
           </button>
-          <button className="button" onClick={() => download("md")} disabled={!content}>
+          <button
+            className="button"
+            style={{ background: "var(--pbi-surface-alt)", color: "var(--pbi-text)" }}
+            onClick={() => download("md")}
+            disabled={!content}
+          >
             <Download size={14} /> .md
           </button>
-          <button className="button" onClick={() => download("txt")} disabled={!content}>
+          <button
+            className="button"
+            style={{ background: "var(--pbi-surface-alt)", color: "var(--pbi-text)" }}
+            onClick={() => download("txt")}
+            disabled={!content}
+          >
             <Download size={14} /> .txt
           </button>
         </div>
       </div>
 
       {loading && !content && (
-        <div className="card" style={{ padding: 12 }}>
+        <div className="card" style={{ padding: 12, background: "var(--pbi-surface-alt)" }}>
           <div className="muted">Initializing story...</div>
-          <div style={{ height: 6, marginTop: 8, background: "#101a33", borderRadius: 999 }} />
+          <div style={{ height: 6, marginTop: 8, background: "#dfe7f4", borderRadius: 999 }} />
         </div>
       )}
 

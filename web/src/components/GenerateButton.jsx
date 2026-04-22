@@ -9,7 +9,7 @@ export default function GenerateButton({ disabled, loading, onClick, onStop }) {
       {loading && (
         <button
           className="button"
-          style={{ background: "#2a2a2a", color: "var(--pbi-text)" }}
+          style={{ background: "var(--pbi-surface-alt)", color: "var(--pbi-text)" }}
           onClick={onStop}
         >
           Stop

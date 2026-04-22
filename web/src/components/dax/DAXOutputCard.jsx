@@ -1,7 +1,7 @@
 "use client";
 
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { ArrowRight, BookOpen, Code, Copy, Lightbulb } from "lucide-react";
 import { motion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
@@ -28,7 +28,7 @@ function codeBlock({ inline, children, ...props }) {
       <code
         {...props}
         style={{
-          background: "rgba(135, 100, 184, 0.2)",
+          background: "#eef1fb",
           color: "var(--pbi-text)",
           padding: "2px 6px",
           borderRadius: 6,
@@ -43,7 +43,7 @@ function codeBlock({ inline, children, ...props }) {
   return (
     <pre
       style={{
-        background: "#0d1117",
+        background: "#f4f7fd",
         padding: 12,
         borderRadius: 8,
         overflow: "auto",
@@ -87,20 +87,20 @@ export default function DAXOutputCard({ daxCode, explanation, suggestions, isLoa
         initial={{ opacity: 0, y: 4 }}
         animate={{ opacity: 1, y: 0 }}
         style={{
-          borderLeft: "3px solid var(--pbi-yellow)",
+          borderLeft: "3px solid var(--pbi-primary)",
           padding: 14,
           background: "var(--pbi-surface)",
         }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <Code size={18} color="var(--pbi-yellow)" />
+            <Code size={18} color="var(--pbi-primary)" />
             <strong style={{ fontSize: 15 }}>Generated DAX</strong>
           </div>
           <button
             type="button"
             className="button"
-            style={{ padding: "6px 10px", fontSize: 12, height: "auto" }}
+            style={{ padding: "6px 10px", fontSize: 12, height: "auto", background: "var(--pbi-surface-alt)", color: "var(--pbi-text)" }}
             disabled={!daxCode?.trim()}
             onClick={() => copyRaw(daxCode)}
           >
@@ -113,12 +113,12 @@ export default function DAXOutputCard({ daxCode, explanation, suggestions, isLoa
         ) : (
           <SyntaxHighlighter
             language="sql"
-            style={vscDarkPlus}
+            style={oneLight}
             showLineNumbers
             customStyle={{
               margin: 0,
               borderRadius: 10,
-              background: "#0d1117",
+              background: "#f4f7fd",
               fontSize: 13,
               fontFamily: "var(--pbi-mono)",
               border: "1px solid var(--pbi-border)",
@@ -140,6 +140,7 @@ export default function DAXOutputCard({ daxCode, explanation, suggestions, isLoa
         style={{
           borderLeft: "3px solid var(--pbi-success)",
           padding: 14,
+          background: "var(--pbi-surface-alt)",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
@@ -162,6 +163,7 @@ export default function DAXOutputCard({ daxCode, explanation, suggestions, isLoa
         style={{
           borderLeft: "3px solid var(--pbi-purple)",
           padding: 14,
+          background: "var(--pbi-surface-alt)",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>

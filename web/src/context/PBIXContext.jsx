@@ -73,6 +73,8 @@ export function PBIXProvider({ children }) {
               columns: data.columns || {},
               measures: data.measures || [],
               relationships: data.relationships || [],
+              sources: data.sources || [],
+              documentation: data.documentation || null,
               rawContext: data.rawContext || "",
               storyContext: data.context || null,
             });

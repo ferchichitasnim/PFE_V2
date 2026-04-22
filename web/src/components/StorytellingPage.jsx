@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { motion } from "framer-motion";
+import { BookOpenText } from "lucide-react";
 import toast from "react-hot-toast";
 import GenerateButton from "./GenerateButton";
 import Header from "./Header";
@@ -18,35 +19,41 @@ export default function StorytellingPage() {
   const [model, setModel] = useState("llama3.2:3b");
   const outputRef = useRef(null);
 
-  const { completion, complete, isLoading, stop, error } = useStoryGeneration(model);
+  const { story, generate, isGenerating, stop, error } = useStoryGeneration();
+
+  const storyInputContext = pbixContext?.storyContext || pbixContext?.rawContext || null;
 
   const handleGenerate = async () => {
-    if (!pbixContext?.storyContext) {
+    if (!storyInputContext) {
       toast.error("Upload a PBIX file first");
       return;
     }
     outputRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    await complete(
-      "Generate the Power BI storytelling narrative with these sections: Overview, Key Insights, Risks or Data Quality Concerns, Recommended Actions.",
-      { body: { context: pbixContext.storyContext, model } }
-    );
+    await generate({
+      context: storyInputContext,
+      model,
+    });
   };
 
   return (
-    <div className="container" style={{ maxWidth: "100%", margin: 0, padding: "20px 20px 28px" }}>
-      <Header />
+    <div style={{ display: "grid", gap: 18 }}>
+      <Header
+        title="Storytelling"
+        subtitle="Generate a clear business narrative from your PBIX model with overview, insights, risk flags, and recommended actions."
+        icon={<BookOpenText size={24} color="var(--pbi-primary)" />}
+      />
 
-      <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} style={{ display: "grid", gap: 14 }}>
-        {!pbixContext?.storyContext ? (
+      <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} style={{ display: "grid", gap: 16 }}>
+        {!storyInputContext ? (
           <EmptyFileState message="Upload a .pbix file using the bar above to generate a story." />
         ) : (
           <>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 12, alignItems: "end" }}>
+            <div className="card" style={{ padding: 16, display: "grid", gap: 14 }}>
               <ModelSelector models={models} selected={model} onSelect={setModel} />
-              <div className="card" style={{ padding: 12, display: "grid", alignItems: "end" }}>
+              <div style={{ display: "flex", justifyContent: "flex-end" }}>
                 <GenerateButton
-                  disabled={!pbixContext?.storyContext}
-                  loading={isLoading}
+                  disabled={!storyInputContext}
+                  loading={isGenerating}
                   onClick={handleGenerate}
                   onStop={stop}
                 />
@@ -54,13 +61,13 @@ export default function StorytellingPage() {
             </div>
 
             {error && (
-              <div className="card" style={{ padding: 12, borderColor: "#E74C3C", color: "#ffc6c6" }}>
+              <div className="card" style={{ padding: 12, borderColor: "rgba(217, 83, 79, 0.5)", color: "var(--pbi-danger)" }}>
                 {error.message}
               </div>
             )}
 
             <div ref={outputRef}>
-              <StoryOutput content={completion} loading={isLoading} />
+              <StoryOutput content={story} loading={isGenerating} />
             </div>
           </>
         )}
